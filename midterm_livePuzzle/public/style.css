@@ -1,0 +1,17 @@
+.video-container {
+  position: relative;
+  width: 400px; /* Adjust as needed */
+  height: 300px; /* Adjust as needed */
+  background-color: red;
+}
+
+#myvideo {
+  position: absolute;
+  width: 100px; /* Adjust as needed */
+  height: 100px; /* Adjust as needed */
+  border-radius: 50%; /* Make it circular */
+  overflow: hidden; /* Ensure video stays within circle */
+}
+body {
+  color: red;
+}

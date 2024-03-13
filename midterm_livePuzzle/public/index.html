@@ -1,0 +1,689 @@
+<html>
+  <head>
+    <style>
+      .video-container {
+        position: relative;
+        width: 400px; /* Adjust as needed */
+        height: 400px; /* Adjust as needed */
+        border-radius: 100%;
+      }
+
+      body {
+        cursor: url("./cursor.png"), crosshair;
+      }
+
+      #myvideo {
+        position: absolute;
+        width: 100px; /* Adjust as needed */
+        height: 100px;
+        border-radius: 50%; /* Make it circular */
+        overflow: hidden; /* Ensure video stays within circle */
+        object-fit: cover;
+        z-index: 2;
+      }
+
+      .stream-video {
+        position: absolute;
+        width: 100px; /* Adjust as needed */
+        height: 100px; /* Adjust as needed */
+        border-radius: 50%; /* Make it circular */
+        overflow: hidden;
+        object-fit: cover;
+        z-index: 2;
+      }
+
+      .cursor-img {
+        position: absolute;
+        width: 32px; /* Adjust as needed */
+        height: 32px; /* Adjust as needed */
+        background-image: url("./cursor.png"); /* Path to your cursor image */
+        background-size: cover;
+        z-index:5;
+      }
+
+      .puzzle-canvas {
+        /* background-color: orange;
+        border-radius: 20px;
+        width: 20rem;
+        height: 20rem; */
+        z-index: 1;
+        display: flex;
+        justify-content: center;
+        position: absolute;
+        /* right: 50%; */
+        left: 39%;
+        top: 30%;
+      }
+
+      #hintImage{
+        z-index: 2;
+        display: flex;
+        width:40%;
+        position:absolute;
+        left:50%;
+        top:35%;
+        transform: translate(-50%, -50%);
+        display: none;
+        opacity: 0.7;
+      }
+
+      .draggable {
+        position: absolute;
+        top: -50px; 
+        left: -50px; 
+        /* cursor: grab; */
+        cursor: url("./cursor.png"), crosshair;
+      }
+
+      #dragImage {
+        width: 100px; /* Adjust as needed */
+        height: auto; /* Maintain aspect ratio */
+       
+      }
+
+
+      #imageContainer img{
+        /* max-width: 5rem; 
+        max-height: 5rem;
+        width: auto; 
+        height: auto;  */
+        scale: 20%;
+        transform: translate(-50%, -50%);
+        z-index:1;
+      }
+
+      #ui{
+        position:absolute;
+        left:50%;
+        top:50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        width:100%;
+        height:80%;
+      }
+      #backgroundCanvas{
+        background-color: #FFFADF;
+        border: 2px solid #000000;
+        width: 45%; /* Adjust as needed */
+        height: 60%; /* Adjust as needed */
+        display: flex;
+        justify-content: center; /* Center the canvas horizontally */
+        align-items: center; /* Center the canvas vertically */
+       
+
+      }
+
+      .buttonArray{
+        display: flex;
+        flex-direction: row;
+        justify-content: space-evenly;
+        position: absolute;
+        top:70%;
+      }
+      #hintBtn{
+        background-color: #FFE0B1;
+        border: 2px solid #000000;
+        padding-left:2rem;
+        padding-right:2rem;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        margin-right:2rem;
+      }
+
+    
+
+      #muteBtn{
+        background-color: #DFF0FF;
+        border: 2px solid #000000;
+        padding-left:2rem;
+        padding-right:2rem;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        margin-right:2rem;
+      }
+      
+      #screenshotBtn{
+        background-color: #EEEEEE;
+        border: 2px solid #000000;
+        padding-left:2rem;
+        padding-right:2rem;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        margin-right:2rem;
+       
+      }
+
+      .buttons:active{
+        box-shadow: 7px 6px 28px 1px rgba(0, 0, 0, 0.24); 
+        transform: translateY(4px); 
+        
+      }
+
+      .buttons{
+        border-radius:10px;
+      }
+    </style>
+    <script src="simplepeer.min.js"></script>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+
+    <script type="text/javascript">
+      let simplepeers = [];
+
+      var mystream;
+      let id;
+      
+      window.addEventListener("load", function () {
+        // This kicks it off
+        initCapture();
+        let cursorimg = document.getElementById("cursorimg");
+        let draggableElements = document.getElementsByClassName("draggable");
+
+        // console.log(cursorimg);
+
+        window.addEventListener("mousemove", function (event) {
+          var video = document.getElementById("myvideo");
+          var container = document.querySelector(".video-container");
+
+          // Calculate new position for the video based on mouse coordinates
+          var newX =
+            event.clientX - container.offsetLeft - video.offsetWidth / 2 + 70;
+          var newY =
+            event.clientY - container.offsetTop - video.offsetHeight / 2 + 80;
+
+          // Update video position
+          video.style.left = newX + "px";
+          video.style.top = newY + "px";
+
+          // Emit mouse position data to the server
+          let data = {
+            x: event.clientX,
+            y: event.clientY,
+            id,
+          };
+
+          // Emit mouse position data to the server
+          socket.emit("mousePosition", data);
+          // console.log("sending mouse pos");
+
+          //cursor image updating
+          //send the image data to socket
+        });
+
+        const cursor = document.getElementById("cursor");
+        const socket = io.connect();
+
+        //❗️❗️dragging puzzles
+        // Get the draggable element
+
+        // Initialize variables for storing mouse position and dragging state
+        let isDragging = false;
+        let elementBeingDragged = null;
+        let offset = { x: 0, y: 0 };
+        for (let i = 0; i < draggableElements.length; i++) {
+          const draggableElement = draggableElements[i];
+
+          // Add event listener to each draggable element
+          draggableElement.addEventListener(
+            "mousedown",
+            function (e) {
+              if (!isDragging) {
+                elementBeingDragged = this;
+
+              isDragging = true;
+              offset = [
+                draggableElement.offsetLeft - e.clientX,
+                draggableElement.offsetTop - e.clientY,
+              ];
+            }},
+            false
+          );
+
+          draggableElement.addEventListener(
+            "mousemove",
+            function (e) {
+              e.preventDefault();
+              if (isDragging && elementBeingDragged == e.target) {
+                const x = (draggableElement.style.left =
+                  e.clientX + offset[0] + "px");
+                const y = (draggableElement.style.top =
+                  e.clientY + offset[1] + "px");
+                const id = draggableElement.id;
+                socket.emit("draggedPosition", { id, x, y });
+                console.log("emitting posiiton" + id + x + y);
+              }
+            },
+            true
+          );
+
+          draggableElement.addEventListener(
+            "mouseup",
+            function () {
+              isDragging = false;
+              elementBeingDragged = null;
+            },
+            true
+          );
+        }
+
+
+         //hint image
+        //showing hint
+        const toggleButton = document.getElementById('hintBtn');
+        const hintImage = document.getElementById('hintImage');
+
+
+        let isButtonPressed = false;
+
+// Function to show/hide image based on button press/release
+function toggleImageVisibility() {
+  if (isButtonPressed) {
+    // Show the image when button is pressed
+    hintImage.style.display = 'block';
+  } else {
+    // Hide the image when button is released
+    hintImage.style.display = 'none';
+  }
+}
+
+// Event listener for button mousedown event (button press)
+toggleButton.addEventListener('mousedown', () => {
+  isButtonPressed = true;
+  toggleImageVisibility();
+});
+
+// Event listener for button mouseup event (button release)
+toggleButton.addEventListener('mouseup', () => {
+  isButtonPressed = false;
+  toggleImageVisibility();
+});
+
+// Event listener for button mouseleave event (in case mouse leaves button without releasing)
+toggleButton.addEventListener('mouseleave', () => {
+  isButtonPressed = false;
+  toggleImageVisibility();
+});
+      
+//screenshot
+// Function to capture the screen and open print dialog
+function captureScreen() {
+    // Scroll to the top of the page
+    window.scrollTo(0, 0);
+
+    // Open print dialog
+    window.print();
+}
+
+
+// Add event listener to the capture button
+const captureButton = document.getElementById('screenshotBtn');
+captureButton.addEventListener('click', captureScreen);
+     
+
+  //mute
+      // Get the mute button element
+      const muteButton = document.getElementById('muteBtn');
+
+// Function to toggle mute state of the video stream
+function toggleMute() {
+    // Get the video element
+    const videoElement = document.getElementById('myvideo');
+
+    // Toggle the muted attribute of the video element
+    videoElement.muted = !videoElement.muted;
+
+    // Change the button text based on the mute state
+    if (videoElement.muted) {
+        muteButton.textContent = 'Unmute';
+        console.log("unmuted");
+    } else {
+        muteButton.textContent = 'Mute';
+        console.log("muted")
+    }
+}
+
+// Add click event listener to the mute button
+muteButton.addEventListener('click', toggleMute);
+
+});
+
+    
+
+     
+
+      //load in images
+      window.addEventListener("DOMContentLoaded", (event) => {
+        const container = document.getElementById("imageContainer");
+        console.log("loading images!!!!");
+
+        // Loop to generate and append image elements
+        for (let i = 1; i <= 54; i++) {
+          const img = document.createElement("img");
+          img.src = `./puzzleimages/${i}.png`; // Replace with the actual path to your images
+          img.id = `dragImage${i}`;
+          img.classList.add("draggable"); // Add the draggable class for styling
+
+      
+          const centerX = window.innerWidth / 2; // Center of the screen horizontally
+          const centerY = window.innerHeight / 2; // Center of the screen vertically
+
+          const rangeX = window.innerWidth * 0.2; // 20% of the screen width
+          const rangeY = window.innerHeight * 0.2; // 20% of the screen height
+
+          // Calculate random coordinates within the centered area
+          const randomX = Math.floor(Math.random() * rangeX) + (centerX - rangeX / 2)-window.innerWidth/2;
+          const randomY = Math.floor(Math.random() * rangeY) + (centerY - rangeY / 2)-window.innerHeight/2;
+          console.log(randomX);
+          img.style.left = `${randomX}px`;
+          img.style.top = `${randomY}px`;
+
+          container.appendChild(img);
+        }
+      });
+      function initCapture() {
+        console.log("initCapture");
+
+        // The video element on the page to display the webcam
+        let video = document.getElementById("myvideo");
+
+        // Constraints - what do we want?
+        let constraints = { audio: true, video: true };
+
+        // Prompt the user for permission, get the stream
+        navigator.mediaDevices
+          .getUserMedia(constraints)
+          .then(function (stream) {
+            /* Use the stream */
+
+            // Global object
+            mystream = stream;
+
+            // Attach to our video object
+            video.srcObject = stream;
+
+            // Wait for the stream to load enough to play
+            video.onloadedmetadata = function (e) {
+              video.play();
+            };
+
+            // Now setup socket
+            setupSocket();
+          })
+          .catch(function (err) {
+            /* Handle the error */
+            alert(err);
+          });
+      }
+
+      function setupSocket() {
+        socket = io.connect();
+
+        socket.on("connect", function () {
+          console.log("Socket Connected");
+          console.log("My socket id: ", socket.id);
+          id = socket.id;
+          // Tell the server we want a list of the other users
+          socket.emit("list");
+        });
+        // Receive mouse position data from others
+        socket.on("mousePosition", function (data) {
+          // const { x, y } = data;
+          // console.log(data);
+          let cursorImages = document.querySelectorAll(".cursor-img");
+          document.querySelectorAll(".stream-video").forEach((el) => {
+            if (data[el.id]) {
+              el.style.left = data[el.id][0] + "px";
+              el.style.top = data[el.id][1] + "px";
+              // console.log(cursorImages);
+
+              cursorImages.forEach(function (cursorImg) {
+                // Calculate position relative to the video bubble
+                // let relX = event.clientX - boundingRect.left;
+                // let relY = event.clientY - boundingRect.top;
+
+                // Set the cursor image position inside the video bubble
+                cursorImg.style.left = data[el.id][0] - 40 + "px";
+                cursorImg.style.top = data[el.id][1] - 50 + "px";
+              });
+              // cursorimg.style.left = data[el.id][0] + "px";
+              // cursorimg.style.top = data[el.id][1] + "px";
+            }
+
+            //cursor image
+
+            // console.log(el.id);
+          });
+        });
+
+        // Listen for updated position from the server and update the draggable picture
+        //⚠️ not working
+        socket.on("draggedPosition", (data) => {
+          console.log("updated dragged position is", data);
+
+          if (
+            data &&
+            typeof data.x === "string" &&
+            typeof data.y === "string"
+          ) {
+            // Remove "px" suffix and convert to numbers
+            const x = parseInt(data.x);
+            const y = parseInt(data.y);
+
+            // Check if conversion was successful
+            if (!isNaN(x) && !isNaN(y)) {
+              // for (let i = 0; i < draggableElements.length; i++) {
+              const draggableElement = document.getElementById(data.id);
+
+              // Update the position of each draggable element
+              draggableElement.style.left = `${x}px`;
+              draggableElement.style.top = `${y}px`;
+              // }
+            } else {
+              console.error(
+                "Invalid data format received for dragged position:",
+                data
+              );
+            }
+          } else {
+            console.error(
+              "Invalid data format received for dragged position:",
+              data
+            );
+          }
+        });
+
+        socket.on("disconnect", function (data) {
+          console.log("Socket disconnected");
+        });
+
+        socket.on("peer_disconnect", function (data) {
+          console.log("simplepeer has disconnected " + data);
+          for (let i = 0; i < simplepeers.length; i++) {
+            if (simplepeers[i].socket_id == data) {
+              console.log("Removing simplepeer: " + i);
+              simplepeers.splice(i, 1);
+              // Should also remove video from page
+              document.getElementById(data).remove();
+            }
+          }
+        });
+
+        // Receive listresults from server
+        socket.on("listresults", function (data) {
+          // console.log(data);
+          for (let i = 0; i < data.length; i++) {
+            // Make sure it's not us
+            if (data[i] != socket.id) {
+              // create a new simplepeer and we'll be the "initiator"
+              let simplepeer = new SimplePeerWrapper(
+                true,
+                data[i],
+                socket,
+                mystream
+              );
+
+              // Push into our array
+              simplepeers.push(simplepeer);
+            }
+          }
+        });
+
+        socket.on("signal", function (to, from, data) {
+          console.log("Got a signal from the server: ", to, from, data);
+
+          // to should be us
+          if (to != socket.id) {
+            console.log("Socket IDs don't match");
+          }
+
+          // Look for the right simplepeer in our array
+          let found = false;
+          for (let i = 0; i < simplepeers.length; i++) {
+            if (simplepeers[i].socket_id == from) {
+              console.log("Found right object");
+              // Give that simplepeer the signal
+              simplepeers[i].inputsignal(data);
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            console.log("Never found right simplepeer object");
+            // Let's create it then, we won't be the "initiator"
+            let simplepeer = new SimplePeerWrapper(
+              false,
+              from,
+              socket,
+              mystream
+            );
+
+            // Push into our array
+            simplepeers.push(simplepeer);
+
+            // Tell the new simplepeer that signal
+            simplepeer.inputsignal(data);
+          }
+        });
+      }
+
+    
+      // A wrapper for simplepeer as we need a bit more than it provides
+      class SimplePeerWrapper {
+        constructor(initiator, socket_id, socket, stream) {
+          this.simplepeer = new SimplePeer({
+            initiator: initiator,
+            trickle: false,
+          });
+
+          // Their socket id, our unique id for them
+          this.socket_id = socket_id;
+
+          // Socket.io Socket
+          this.socket = socket;
+
+          // Our video stream - need getters and setters for this
+          this.stream = stream;
+
+          // simplepeer generates signals which need to be sent across socket
+          this.simplepeer.on("signal", (data) => {
+            this.socket.emit("signal", this.socket_id, this.socket.id, data);
+          });
+
+          // When we have a connection, send our stream
+          this.simplepeer.on("connect", () => {
+            console.log("CONNECT");
+            console.log(this.simplepeer);
+            //p.send('whatever' + Math.random())
+
+            // Let's give them our stream
+            this.simplepeer.addStream(stream);
+            console.log("Send our stream");
+          });
+
+          // Stream coming in to us
+          this.simplepeer.on("stream", (stream) => {
+            console.log("Incoming Stream");
+
+            // This should really be a callback
+            // Create a video object
+            let ovideo = document.createElement("VIDEO");
+            ovideo.id = this.socket_id;
+            ovideo.srcObject = stream;
+            ovideo.muted = false;
+            ovideo.classList.add("stream-video");
+            ovideo.classList.add("draggable");
+            ovideo.onloadedmetadata = function (e) {
+              ovideo.play();
+            };
+            document.body.appendChild(ovideo);
+
+            // console.log(ovideo);
+          });
+
+          this.simplepeer.on("close", () => {
+            console.log("Got close event");
+            // Should probably remove from the array of simplepeers
+          });
+
+          this.simplepeer.on("error", (err) => {
+            console.log(err);
+          });
+        }
+
+        inputsignal(sig) {
+          this.simplepeer.signal(sig);
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div>
+      <img id = "hintImage" src ="hintImage.jpg">
+      <div id = "ui">
+      <canvas id="backgroundCanvas"></canvas>
+      <div class = "buttonArray">
+        <button id = "hintBtn" class = "buttons">Hint</button>
+       
+        <button id = "screenshotBtn"class = "buttons">Screenshot</button>
+        <button id = "muteBtn"class = "buttons">Mute(notworkingyet)</button>
+      
+      </div></div>
+      <div class="video-container">
+        <video
+          class="video-circle"
+          id="myvideo"
+          width="300"
+          height="225"
+          muted
+        ></video>
+        <div class="stream-video"></div>
+
+        <!-- sending mouse data  -->
+        <div id="cursor"></div>
+        <div class="cursor-img">
+          <!-- <img src="./cursor.png" /> -->
+        </div>
+      </div>
+
+      <div class="puzzle-canvas">
+        <div id="imageContainer"></div>
+       
+        <!-- <div>
+          <img
+            id="dragImage"
+            src="testpuzzle.png"
+            alt="Draggable Picture"
+            class="draggable"
+          /><br />
+          <img
+            id="dragImage1"
+            src="testpuzzle1.png"
+            alt="Draggable Picture"
+            class="draggable"
+          /> -->
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

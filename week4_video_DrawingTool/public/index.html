@@ -1,0 +1,321 @@
+<html>
+  <head>
+    <style>
+      .checkBoxes {
+        width: 15px;
+        height: 15px;
+        margin: 0px;
+        border: 0.1px solid #dbdbdb;
+        appearance: none;
+        /* -webkit-appearance: none;
+        -moz-appearance: none;
+        -ms-appearance: none;
+        -o-appearance: none; */
+        /* Hide the checkbox */
+        /* position: relative; */
+        /* display: inline-block; */
+      }
+
+      .checkBoxes:checked {
+        background-color: #008802;
+      }
+
+      .Controller {
+        top: 49.5%;
+        left: 14%;
+        position: absolute;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: center;
+      }
+
+      #checkbox-grid {
+        position: absolute;
+        left: 40%;
+        top: 3%;
+      }
+
+      /* Show the checkmark when the checkbox is checked */
+
+      body {
+        background-color: rgb(255, 255, 255);
+      }
+
+      #submit {
+        padding: 5px 5px;
+        width: 5rem;
+        font-size: 10px;
+        border: none;
+        border-radius: 5px;
+        background-color: #a7a7a7;
+        color: #ffffff;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin-bottom: 1rem;
+      }
+
+      #submit:hover {
+        background-color: #313131;
+      }
+
+      #color {
+        margin-left: 10px;
+        width: 30px;
+        height: 30px;
+        border: none;
+        cursor: pointer;
+        margin-bottom: -0.5rem;
+      }
+
+      #videos {
+        display: flex;
+        flex-direction: column;
+      }
+
+      #canvas-container {
+        position: relative;
+      }
+
+      #transparent_overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 400px;
+        height: 300px;
+        background-color: rgba(
+          0,
+          0,
+          0,
+          0.1
+        ); /* Adjust the alpha value for transparency */
+        pointer-events: none; /* Allows clicks to pass through the overlay to elements below */
+      }
+
+      #transparent_overlay1 {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 400px;
+        height: 300px;
+        background-color: rgba(
+          0,
+          0,
+          0,
+          0.9
+        ); /* Adjust the alpha value for transparency */
+        pointer-events: none; /* Allows clicks to pass through the overlay to elements below */
+      }
+
+      #thecanvas {
+        width: 400px;
+        height: 300px;
+        margin-bottom: 3rem;
+        display: block;
+      }
+    </style>
+    <!-- <link href="style.css" type="stylesheet" /> -->
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript">
+      let submit;
+      window.addEventListener("load", function () {
+        submit = document.getElementById("submit");
+        submit.addEventListener("click", function () {
+          let data_color = {
+            // message: document.getElementById("message").value,
+            color: document.getElementById("color").value,
+          };
+          socket.emit("chatmessage", data_color);
+        });
+
+        document.addEventListener("click", function () {
+          // socket.emit("click", {});
+        });
+
+        //checkbox
+        let checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        console.log(checkboxes);
+        let checkbox1 = document.getElementById("cb1");
+
+        checkboxes.forEach(function (checkbox) {
+          checkbox.addEventListener("change", function () {
+            let data1 = {
+              id: this.id,
+              checked: this.checked,
+            };
+            socket.emit("checkboxChange", data1);
+            console.log(data1);
+          });
+        });
+      });
+
+      var socket = io.connect();
+      let thecanvas = document.getElementById("thecanvas");
+
+      socket.on("connect", function () {
+        console.log("Connected");
+      });
+
+      socket.on("click", function () {
+        console.log("Got a click");
+        document.body.style.backgroundColor = "#000000";
+        setTimeout(function () {
+          document.body.style.backgroundColor = "#ffffff";
+        }, 100);
+      });
+
+      // Receive from chatmessage - colors
+      socket.on("chatmessage", function (data_color) {
+        //console.log(data_color);
+        let newelement = document.createElement("div");
+        let thecanvas = document.getElementById("thecanvas");
+        newelement.style.color = data_color.color;
+
+        // Extract RGB values from the color data
+        let rgbValues = hexToRgb(data_color.color);
+        console.log("rgbValue=" + rgbValues);
+        if (rgbValues) {
+          // Set the background color of the transparent overlay with fixed alpha value
+          let rgbaColor = `rgba(${rgbValues.r}, ${rgbValues.g}, ${rgbValues.b}, 0.25)`;
+          transparent_overlay.style.backgroundColor = rgbaColor;
+          transparent_overlay1.style.backgroundColor = rgbaColor;
+          console.log("rgbaColor=" + rgbaColor);
+        }
+        console.log(thecanvas.style.backgroundColor);
+        // Update grid color
+        document.styleSheets[0].addRule(
+          ".checkBoxes:checked",
+          `background-color: ${data_color.color} !important`
+        );
+      });
+
+      // Receive checkbox change event
+      socket.on("checkboxChange", function (data1) {
+        console.log("received checkbox change event ", data1);
+        let checkbox = document.getElementById(data1.id);
+        checkbox.checked = data1.checked;
+      });
+
+      socket.on("getVideo", function (data) {
+        document.getElementById("theimage").src = data;
+      });
+      //video
+      window.addEventListener("load", function () {
+        let video = document.getElementById("thevideo");
+        let thecanvas = document.getElementById("thecanvas");
+        let thecontext = thecanvas.getContext("2d");
+
+        let constraints = { audio: true, video: true };
+
+        // Prompt the user for permission, get the stream
+        navigator.mediaDevices
+          .getUserMedia(constraints)
+          .then(function (stream) {
+            /* Use the stream */
+
+            // Attach to our video object
+            video.srcObject = stream;
+
+            // Wait for the stream to load enough to play
+            video.onloadedmetadata = function (e) {
+              video.play();
+              setInterval(function () {
+                thecontext.drawImage(
+                  video,
+                  0,
+                  0,
+                  thecanvas.width,
+                  thecanvas.height
+                );
+                socket.emit("getVideo", thecanvas.toDataURL());
+              }, 100);
+            };
+          })
+          .catch(function (err) {
+            /* Handle the error */
+            alert(err);
+          });
+      });
+
+      // Function to convert hex color to RGB
+      function hexToRgb(hex) {
+        // Remove '#' if present
+        hex = hex.replace(/^#/, "");
+        // Convert hex to RGB
+        let bigint = parseInt(hex, 16);
+        let r = (bigint >> 16) & 255;
+        let g = (bigint >> 8) & 255;
+        let b = bigint & 255;
+        // Return RGB values as an object
+        return { r, g, b };
+      }
+    </script>
+  </head>
+  <body>
+    <!-- <div id="messages">No Messages Yet</div> -->
+
+    <div id="videos">
+      <!-- <div class="controller"> </div>-->
+      <input type="color" id="color" />
+      <br />
+      <input id="submit" type="submit" value="Set Color" />
+
+      <video id="thevideo" muted hidden></video>
+
+      <div id="canvas-container">
+        <canvas id="thecanvas" width="400" height="300"></canvas>
+        <div id="transparent_overlay"></div>
+      </div>
+
+      <div id="canvas-container">
+        <img id="theimage" width="400" heigh="300" />
+        <div id="transparent_overlay1"></div>
+      </div>
+    </div>
+    <!-- <input type="text" id="message" name="message" /> -->
+
+    <!-- Grid of checkboxes -->
+    <div id="checkbox-grid"></div>
+    <div class="row">
+      <div class="column">
+        <!-- <input type="checkbox" class="checkBoxes" id="cb1" name="cb1" />
+          <input type="checkbox" class="checkBoxes" id="cb2" name="cb2" />
+          <input type="checkbox" class="checkBoxes" id="cb3" name="cb3" />
+          <input type="checkbox" class="checkBoxes" id="cb4" name="cb4" /> -->
+        <!-- Repeat this line 10 times for 10 checkboxes in a row -->
+        <!-- Use JavaScript or a server-side template engine to generate the checkboxes dynamically if needed -->
+      </div>
+    </div>
+    <!-- </div> -->
+    <script>
+      //generate checkboxes
+      // Select the checkbox grid container
+      const checkboxGrid = document.getElementById("checkbox-grid");
+
+      // Loop through rows
+      for (let i = 1; i <= 50; i++) {
+        // Create a row element
+        const row = document.createElement("div");
+        row.classList.add("row");
+
+        // Loop through columns
+        for (let j = 1; j <= 50; j++) {
+          // Create a checkbox element
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.classList.add("checkBoxes");
+
+          // Generate unique ID for each checkbox based on row and column
+          let checkboxId = "cb" + ((i - 1) * 50 + j);
+          checkbox.id = checkboxId;
+          checkbox.name = checkboxId;
+
+          // Append the checkbox to the row
+          row.appendChild(checkbox);
+        }
+
+        // Append the row to the checkbox grid
+        checkboxGrid.appendChild(row);
+      }
+    </script>
+  </body>
+</html>

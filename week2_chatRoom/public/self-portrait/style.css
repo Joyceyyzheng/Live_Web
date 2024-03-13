@@ -1,0 +1,131 @@
+body {
+  text-align: center;
+  /* cursor: url("./waterDrop.png"), auto; */
+  color: green;
+}
+
+#videoCam {
+  cursor: url("./waterDrop.png"), auto;
+  z-index: -50;
+}
+
+/*#startBtn {
+  margin-top: 3rem;
+  color: green;
+  background-color: greenyellow;
+  border: 0;
+  /* font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
+    "Lucida Sans Unicode", Geneva, Verdana, sans-serif; 
+  font-size: 40px;
+  border-radius: 10px;
+  padding: 1rem;
+}
+*/
+/*
+#startBtn:active {
+  transform: scale(0.98);
+  /* Scaling button to 0.98 to its original size */
+/* box-shadow: 3px 2px 22px 1px rgba(0, 0, 0, 0.24); */
+/* Lowering the shadow 
+}
+*/
+
+/*#startBtn:hover {
+  color: aquamarine;
+  background-color: black;
+}
+*/
+
+#sleepyText {
+  left: 46.5%;
+  /* right: auto; */
+  /* top: 50%; */
+  width: 100px;
+  height: 100px;
+  /* background-color: #3498db; */
+  position: absolute;
+  transition: transform 0.5s ease-in-out;
+  z-index: 1;
+}
+
+/* css from glith */
+:root {
+  --color-bg: #69f7be;
+  --color-text-main: #000000;
+  --color-primary: #ffff00;
+  --wrapper-height: 87vh;
+  --image-max-width: 300px;
+  --image-margin: 3rem;
+  --font-family: "HK Grotesk";
+  --font-family-header: "HK Grotesk";
+}
+
+/* Import fonts */
+@font-face {
+  font-family: HK Grotesk;
+  src: url("https://cdn.glitch.me/605e2a51-d45f-4d87-a285-9410ad350515%2FHKGrotesk-Regular.otf?v=1603136326027")
+    format("opentype");
+}
+@font-face {
+  font-family: HK Grotesk;
+  font-weight: bold;
+  src: url("https://cdn.glitch.me/605e2a51-d45f-4d87-a285-9410ad350515%2FHKGrotesk-Bold.otf?v=1603136323437")
+    format("opentype");
+}
+
+/******************************************************************************
+END Glitch hello-app default styles
+******************************************************************************/
+
+body {
+  font-family: HK Grotesk;
+  background-color: var(--color-bg);
+}
+
+/* Page structure */
+.wrapper {
+  /* min-height: var(--wrapper-height);
+  display: grid;
+  place-items: center;
+  margin: 0 1rem; */
+}
+.content {
+  /* display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; */
+}
+
+/* Very light scaling for our illustration */
+.title {
+  color: #2800ff;
+  font-family: HK Grotesk;
+  font-style: normal;
+  font-weight: bold;
+  font-size: 100px;
+  line-height: 105%;
+  margin: 0;
+}
+
+/* Button - Add it from the README instructions */
+button,
+input {
+  font-family: inherit;
+  font-size: 100%;
+  background: #fffcfc;
+  border: 1px solid #000000;
+  box-sizing: border-box;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  transition: 500ms;
+  margin-top: 3rem;
+}
+
+button:active {
+  background-color: #000;
+  color: aquamarine;
+}
+/* Subheading */
+h2 {
+  color: #2800ff;
+}
